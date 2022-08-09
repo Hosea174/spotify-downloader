@@ -1,11 +1,11 @@
 import os
-from pprint import pprint
 import re
 import urllib.request
 from timeit import default_timer as timer
 
 import mutagen
 import spotipy
+from moviepy.editor import *
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import APIC, ID3
 from mutagen.mp3 import MP3
@@ -98,18 +98,21 @@ def download_yt(yt_link, track_info):
     )
     yt = YouTube(yt_link)
     video = yt.streams.filter(only_audio=True).first()
-    out_file = video.download(output_path="../music")
-    base = os.path.splitext(out_file)[0]
-    new_file = base + ".mp3"
-    # TODO: convert 'out_file' to mp3
-    new_file = base + ".mp3"
-    os.rename(out_file, new_file)
-    file_path = os.path.realpath(new_file)
-    fsize = round(os.path.getsize(file_path) / 1024**2, 2)
-    set_metadata(track_info, file_path)
+    vid_file = video.download(output_path="../music")
+    end = timer()
+
+    # convert the downloaded video to mp3
+    base = os.path.splitext(vid_file)[0]
+    audio_file = base + ".mp3"
+    mp4_no_frame = AudioFileClip(vid_file)
+    mp4_no_frame.write_audiofile(audio_file, logger=None)
+    mp4_no_frame.close()
+    os.remove(vid_file)
+
+    fsize = round(os.path.getsize(audio_file) / 1024**2, 2)
+    set_metadata(track_info, audio_file)
 
     print("=====================================================")
-    end = timer()
     print("Time take by download_yt:", end - start)
     print(f"Download size: {fsize} MB")
 
@@ -117,11 +120,7 @@ def download_yt(yt_link, track_info):
 def set_metadata(metadata, file_path):
     """adds metadata to the downloaded mp3 file"""
 
-    mp3file = MP3(file_path)
-    try:
-        mp3file.add_tags(ID3=EasyID3)
-    except mutagen.id3._util.error:
-        print("Tag already exists")
+    mp3file = EasyID3(file_path)
 
     # add metadata
     mp3file["albumartist"] = metadata["artist_name"]
