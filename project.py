@@ -24,26 +24,29 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 def main():
     # TODO: get this url from the user, and validate it
     # url = "https://open.spotify.com/track/1AI7UPw3fgwAFkvAlZWhE0?si=19066311c4e84d11"
-    # url = "https://open.spotify.com/playlist/4GY7mdvKomjSHLZynGeOOZ?si=857f114d0f12416c"
-    url = "https://open.spotify.com/track/6sy3LkhNFjJWlaeSMNwQ62?si=fdc57ca0a1314817"
+    url = "https://open.spotify.com/playlist/4GY7mdvKomjSHLZynGeOOZ?si=857f114d0f12416c"
+    # url = "https://open.spotify.com/track/6sy3LkhNFjJWlaeSMNwQ62?si=fdc57ca0a1314817"
     songs = []
     if "track" in url:
         songs.append(get_track_info(url))
     elif "playlist" in url:
         songs.extend(get_playlist_info(url))
 
-    for track_info in songs:
-        search_term = f"{track_info['track_title']} {track_info['artist_name']} audio"
+    for i, track_info in enumerate(songs, start=1):
+        search_term = f"{track_info['artist_name']} {track_info['track_title']} audio"
         video_link = find_youtube(search_term)
+        print(f"({i}/{len(songs)}) Downloading ", end="")
         download_yt(video_link, track_info)
 
 
 def get_track_info(track_url):
     track = sp.track(track_url)
+    with open("response.py", "w") as file:
+        file.write(str(track))
     # TODO: handle request errors
     # TODO: handle potential KeyError and IndexError
     track_metadata = {
-        "artist_name": track["album"]["artists"][0]["name"],
+        "artist_name": track["artists"][0]["name"],
         "track_title": track["name"],
         "track_number": track["track_number"],
         "isrc": track["external_ids"]["isrc"],
@@ -58,17 +61,14 @@ def get_track_info(track_url):
 
 
 def get_playlist_info(sp_playlist):
-    # with open("response.py", "w") as file:
-    #     file.write(str(tracks))
+
     playlist = sp.playlist_tracks(sp_playlist)
     tracks = [item["track"] for item in playlist["items"]]
     tracks_info = []
     for track in tracks:
         track_info = get_track_info(track["uri"])
         tracks_info.append(track_info)
-        # search_term = f"{track_info['track_title']} {track_info['artist_name']} audio"
-        # video_link = find_youtube(search_term)
-        # download_yt(video_link, track_info)
+
     return tracks_info
 
 
@@ -91,10 +91,9 @@ def download_yt(yt_link, track_info):
     """download the video in mp3 format from youtube"""
     start = timer()
     # TODO: show progres
-    # TODO: check if the file doesn't already exist in the directory /music
     # TODO: return True if the video is downloaded, False otherwise
     print(
-        f"Downloading '{track_info['track_title']}' by '{track_info['artist_name']}' ..."
+        f"'{track_info['track_title']}' by '{track_info['artist_name']}'..."
     )
     yt = YouTube(yt_link)
     video = yt.streams.filter(only_audio=True).first()
