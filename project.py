@@ -1,4 +1,5 @@
 import os
+from pprint import pprint
 import re
 import urllib.request
 from timeit import default_timer as timer
@@ -22,12 +23,19 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 def main():
     # TODO: get this url from the user, and validate it
-    url = "https://open.spotify.com/track/1AI7UPw3fgwAFkvAlZWhE0?si=19066311c4e84d11"
+    # url = "https://open.spotify.com/track/1AI7UPw3fgwAFkvAlZWhE0?si=19066311c4e84d11"
+    # url = "https://open.spotify.com/playlist/4GY7mdvKomjSHLZynGeOOZ?si=857f114d0f12416c"
+    url = "https://open.spotify.com/track/6sy3LkhNFjJWlaeSMNwQ62?si=fdc57ca0a1314817"
+    songs = []
+    if "track" in url:
+        songs.append(get_track_info(url))
+    elif "playlist" in url:
+        songs.extend(get_playlist_info(url))
 
-    track_info = get_track_info(url)
-    search_term = f"{track_info['track_title']} {track_info['artist_name']} audio"
-    video_link = find_youtube(search_term)
-    download_yt(video_link, track_info)
+    for track_info in songs:
+        search_term = f"{track_info['track_title']} {track_info['artist_name']} audio"
+        video_link = find_youtube(search_term)
+        download_yt(video_link, track_info)
 
 
 def get_track_info(track_url):
@@ -50,11 +58,18 @@ def get_track_info(track_url):
 
 
 def get_playlist_info(sp_playlist):
-    # TODO: exctract the url of all songs in the playlist then call get_track_info() on each url
-    # TODO: return a list of dictionaries containing the info of each song
-    # playlist = sp.playlist_tracks(url)
-
-    ...
+    # with open("response.py", "w") as file:
+    #     file.write(str(tracks))
+    playlist = sp.playlist_tracks(sp_playlist)
+    tracks = [item["track"] for item in playlist["items"]]
+    tracks_info = []
+    for track in tracks:
+        track_info = get_track_info(track["uri"])
+        tracks_info.append(track_info)
+        # search_term = f"{track_info['track_title']} {track_info['artist_name']} audio"
+        # video_link = find_youtube(search_term)
+        # download_yt(video_link, track_info)
+    return tracks_info
 
 
 def find_youtube(query):
@@ -85,6 +100,8 @@ def download_yt(yt_link, track_info):
     video = yt.streams.filter(only_audio=True).first()
     out_file = video.download(output_path="../music")
     base = os.path.splitext(out_file)[0]
+    new_file = base + ".mp3"
+    # TODO: convert 'out_file' to mp3
     new_file = base + ".mp3"
     os.rename(out_file, new_file)
     file_path = os.path.realpath(new_file)
