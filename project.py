@@ -21,13 +21,8 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 
 def main():
-    # url = "https://open.spotify.com/track/1AI7UPw3fgwAFkvAlZWhE0?si=19066311c4e84d11"
-    # url = "https://open.spotify.com/playlist/4GY7mdvKomjSHLZynGeOOZ?si=857f114d0f12416c"
-    # url = "https://open.spotify.com/track/6sy3LkhNFjJWlaeSMNwQ62?si=fdc57ca0a1314817"
-    # url = "https://open.spotify.com/playlist/4TE13pqPsdC28oiFDPL62I?si=f3c765e3b9fd4374"
-    url = "https://open.spotify.com/playlist/4GY7mdvKomjSHLZynGeOOZ?si=3a81f53a96774fb9"
 
-    # url = get_url()
+    url = get_url()
     if "track" in url:
         songs = [get_track_info(url)]
     elif "playlist" in url:
@@ -35,6 +30,7 @@ def main():
         # songs.extend(get_playlist_info(url))
 
     start = time.time()
+    downloaded = 0
     for i, track_info in enumerate(songs, start=1):
         search_term = f"{track_info['artist_name']} {track_info['track_title']} audio"
         video_link = find_youtube(search_term)
@@ -49,16 +45,20 @@ def main():
             console.print(
                 "[blue]______________________________________________________________________"
             )
+            downloaded += 1
         else:
-            print("File exists. Skipping...")
+            print("Skipping...")
+    os.rmdir("../music/tmp")
     end = time.time()
 
     console.print(
-        f"DOWNLOAD COMPLETED: {len(songs)} song(s) dowloaded".center(70, " "),
+        f"DOWNLOAD COMPLETED: {downloaded}/{len(songs)} song(s) dowloaded".center(
+            70, " "
+        ),
         style="on green",
     )
     console.print(
-        f"Time taken: {round(end - start)} sec".center(70, " "), style="on white"
+        f"Total time taken: {round(end - start)} sec".center(70, " "), style="on white"
     )
 
 
@@ -104,43 +104,48 @@ def get_playlist_info(sp_playlist):
 def find_youtube(query):
     # TODO: handle request errors
     # TODO: automatically retry if error is raised after a few seconds
-    words = query.replace(" ", "+")
-    search_link = "https://www.youtube.com/results?search_query=" + words
-    response = urllib.request.urlopen(search_link)  # wrap with try/except
+    phrase = query.replace(" ", "+")
+    search_link = "https://www.youtube.com/results?search_query=" + phrase
+    try:
+        response = urllib.request.urlopen(search_link)
+    except:
+        raise ValueError("Please check your internet connection and try again later.")
     search_results = re.findall(r"watch\?v=(\S{11})", response.read().decode())
     first_vid = "https://www.youtube.com/watch?v=" + search_results[0]
 
     return first_vid
 
 
-def prompt_exists_action(title):
+def prompt_exists_action():
     global file_exists_action
-    exists = os.path.exists(f"../music/{title}.mp3")
-    if exists:
-        print("This file already exists.")
-        while True:
-            resp = input("replace[R] | replace all[RA] | skip[S] | skip all[SA]: ")
-            if resp in ("RA", "SA"):
-                file_exists_action = resp
-            if resp in ("R", "RA"):
-                return True
-            if resp in ("S", "SA"):
-                return False
+    if file_exists_action == "SA":  # SA == 'Skip All'
+        return False
+    elif file_exists_action == "RA":  # RA == 'Replace All'
+        return True
+
+    print("This file already exists.")
+    while True:
+        resp = (
+            input("replace[R] | replace all[RA] | skip[S] | skip all[SA]: ")
+            .upper()
+            .strip()
+        )
+        if resp in ("RA", "SA"):
+            file_exists_action = resp
+        if resp in ("R", "RA"):
+            return True
+        elif resp in ("S", "SA"):
+            return False
+        print("---Invalid response---")
 
 
 def download_yt(yt_link):
     """download the video in mp3 format from youtube"""
-    # TODO: return True if the video is downloaded, False otherwise
     yt = YouTube(yt_link)
     # don't download existing files if the user wants to skip them
     exists = os.path.exists(f"../music/{yt.title}.mp3")
-    if exists:
-        if file_exists_action == "SA":
-            return False
-        elif file_exists_action == "RA":
-            ...
-        elif not prompt_exists_action(yt.title):
-            return False
+    if exists and not prompt_exists_action():
+        return False
 
     # download the music
     video = yt.streams.filter(only_audio=True).first()
@@ -152,6 +157,8 @@ def download_yt(yt_link):
     mp4_no_frame.write_audiofile(audio_file, logger=None)
     mp4_no_frame.close()
     os.remove(vid_file)
+    os.replace(audio_file, f"../music/tmp/{yt.title}.mp3")
+    audio_file = f"../music/tmp/{yt.title}.mp3"
     # fsize = round(os.path.getsize(audio_file) / 1024**2, 2)
     # print(f"Download size: {fsize} MB")
     return audio_file
