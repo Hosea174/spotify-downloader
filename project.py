@@ -23,13 +23,11 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 
 def main():
-
-    url = get_url()
+    url = validate_url(input("Enter a spotify url: ").strip())
     if "track" in url:
         songs = [get_track_info(url)]
     elif "playlist" in url:
         songs = get_playlist_info(url)
-        # songs.extend(get_playlist_info(url))
 
     start = time.time()
     downloaded = 0
@@ -49,10 +47,12 @@ def main():
             )
             downloaded += 1
         else:
-            print("Skipping...")
+            print("File exists. Skipping...")
     os.rmdir("../music/tmp")
     end = time.time()
-
+    print()
+    os.chdir("../music")
+    print(f"Download location: {os.getcwd()}")
     console.print(
         f"DOWNLOAD COMPLETED: {downloaded}/{len(songs)} song(s) dowloaded".center(
             70, " "
@@ -64,18 +64,17 @@ def main():
     )
 
 
-def get_url():
-    url = input("Enter a spotify url: ")
-    if re.search(r"^(https?://)?open\.spotify\.com/(playlist|track)/.+$", url):
-        return url
+def validate_url(sp_url):
+    if re.search(r"^(https?://)?open\.spotify\.com/(playlist|track)/.+$", sp_url):
+        return sp_url
 
-    raise ValueError("Invalid spotify url")
+    raise ValueError("Invalid Spotify URL")
 
 
 def get_track_info(track_url):
     res = requests.get(track_url)
     if res.status_code != 200:
-        raise ValueError("Invalid spotify track URL")
+        raise ValueError("Invalid Spotify track URL")
 
     track = sp.track(track_url)
 
@@ -97,16 +96,19 @@ def get_track_info(track_url):
 def get_playlist_info(sp_playlist):
     res = requests.get(sp_playlist)
     if res.status_code != 200:
-        raise ValueError("Invalid spotify playlist URL")
+        raise ValueError("Invalid Spotify playlist URL")
     pl = sp.playlist(sp_playlist)
     if not pl["public"]:
-        raise ValueError("Can't download private playlists. Change your playlist's state to public.") 
+        raise ValueError(
+            "Can't download private playlists. Change your playlist's state to public."
+        )
     playlist = sp.playlist_tracks(sp_playlist)
 
     tracks = [item["track"] for item in playlist["items"]]
     tracks_info = []
     for track in tracks:
-        track_info = get_track_info(track["uri"])
+        track_url = f"https://open.spotify.com/track/{track['id']}"
+        track_info = get_track_info(track_url)
         tracks_info.append(track_info)
 
     return tracks_info
@@ -133,6 +135,7 @@ def find_youtube(query):
 
 
 def prompt_exists_action():
+    """ask the user what happens if the file being downloaded already exists"""
     global file_exists_action
     if file_exists_action == "SA":  # SA == 'Skip All'
         return False
