@@ -2,6 +2,7 @@ import os
 import re
 import time
 import urllib.request
+import requests
 
 import spotipy
 from moviepy.editor import *
@@ -10,6 +11,7 @@ from mutagen.id3 import APIC, ID3
 from pytube import YouTube
 from rich.console import Console
 from spotipy.oauth2 import SpotifyClientCredentials
+
 
 SPOTIPY_CLIENT_ID = os.environ["SPOTIPY_CLIENT_ID"]
 SPOTIPY_CLIENT_SECRET = os.environ["SPOTIPY_CLIENT_SECRET"]
@@ -71,9 +73,12 @@ def get_url():
 
 
 def get_track_info(track_url):
+    res = requests.get(track_url)
+    if res.status_code != 200:
+        raise ValueError("Invalid spotify track URL")
+
     track = sp.track(track_url)
-    # TODO: handle request errors
-    # TODO: handle potential KeyError and IndexError
+
     track_metadata = {
         "artist_name": track["artists"][0]["name"],
         "track_title": track["name"],
@@ -90,6 +95,9 @@ def get_track_info(track_url):
 
 
 def get_playlist_info(sp_playlist):
+    res = requests.get(sp_playlist)
+    if res.status_code != 200:
+        raise ValueError("Invalid spotify playlist URL")
 
     playlist = sp.playlist_tracks(sp_playlist)
     tracks = [item["track"] for item in playlist["items"]]
@@ -102,14 +110,19 @@ def get_playlist_info(sp_playlist):
 
 
 def find_youtube(query):
-    # TODO: handle request errors
     # TODO: automatically retry if error is raised after a few seconds
     phrase = query.replace(" ", "+")
     search_link = "https://www.youtube.com/results?search_query=" + phrase
-    try:
-        response = urllib.request.urlopen(search_link)
-    except:
+    count = 0
+    while count < 3:
+        try:
+            response = urllib.request.urlopen(search_link)
+            break
+        except:
+            count += 1
+    else:
         raise ValueError("Please check your internet connection and try again later.")
+
     search_results = re.findall(r"watch\?v=(\S{11})", response.read().decode())
     first_vid = "https://www.youtube.com/watch?v=" + search_results[0]
 
