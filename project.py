@@ -98,8 +98,11 @@ def get_playlist_info(sp_playlist):
     res = requests.get(sp_playlist)
     if res.status_code != 200:
         raise ValueError("Invalid spotify playlist URL")
-
+    pl = sp.playlist(sp_playlist)
+    if not pl["public"]:
+        raise ValueError("Can't download private playlists. Change your playlist's state to public.") 
     playlist = sp.playlist_tracks(sp_playlist)
+
     tracks = [item["track"] for item in playlist["items"]]
     tracks_info = []
     for track in tracks:
