@@ -1,9 +1,10 @@
 import os
 import re
+import shutil
 import time
 import urllib.request
-import requests
 
+import requests
 import spotipy
 from moviepy.editor import *
 from mutagen.easyid3 import EasyID3
@@ -11,7 +12,6 @@ from mutagen.id3 import APIC, ID3
 from pytube import YouTube
 from rich.console import Console
 from spotipy.oauth2 import SpotifyClientCredentials
-
 
 SPOTIPY_CLIENT_ID = os.environ["SPOTIPY_CLIENT_ID"]
 SPOTIPY_CLIENT_SECRET = os.environ["SPOTIPY_CLIENT_SECRET"]
@@ -48,7 +48,7 @@ def main():
             downloaded += 1
         else:
             print("File exists. Skipping...")
-    os.rmdir("../music/tmp")
+    shutil.rmtree("../music/tmp")
     end = time.time()
     print()
     os.chdir("../music")
@@ -85,7 +85,6 @@ def get_track_info(track_url):
         "isrc": track["external_ids"]["isrc"],
         "album_art": track["album"]["images"][1]["url"],
         "album_name": track["album"]["name"],
-        # "total_tracks": track["album"]["total_tracks"],
         "release_date": track["album"]["release_date"],
         "artists": [artist["name"] for artist in track["artists"]],
     }
@@ -115,7 +114,6 @@ def get_playlist_info(sp_playlist):
 
 
 def find_youtube(query):
-    # TODO: automatically retry if error is raised after a few seconds
     phrase = query.replace(" ", "+")
     search_link = "https://www.youtube.com/results?search_query=" + phrase
     count = 0
@@ -161,6 +159,8 @@ def prompt_exists_action():
 def download_yt(yt_link):
     """download the video in mp3 format from youtube"""
     yt = YouTube(yt_link)
+    # remove chars that can't be in a windows file name
+    yt.title = "".join([c for c in yt.title if c not in ['/', '\\', '|', '?', '*', ':', '>', '<', '"']])
     # don't download existing files if the user wants to skip them
     exists = os.path.exists(f"../music/{yt.title}.mp3")
     if exists and not prompt_exists_action():
@@ -178,8 +178,6 @@ def download_yt(yt_link):
     os.remove(vid_file)
     os.replace(audio_file, f"../music/tmp/{yt.title}.mp3")
     audio_file = f"../music/tmp/{yt.title}.mp3"
-    # fsize = round(os.path.getsize(audio_file) / 1024**2, 2)
-    # print(f"Download size: {fsize} MB")
     return audio_file
 
 
