@@ -1,5 +1,6 @@
 import pytest
-from project import validate_url, get_track_info, get_playlist_info, find_youtube
+
+from project import get_playlist_info, get_track_info, validate_url
 
 
 def test_validate_url():
