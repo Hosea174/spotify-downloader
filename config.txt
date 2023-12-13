@@ -1,1 +1,20 @@
-https://chat.openai.com/c/a7bb7674-37f4-48ec-9064-1b7e89e7fe95
+Solution of this problem
+
+export : The term 'export' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of 
+the name, or if a path was included, verify that the path is correct and try again.       
+At line:1 char:2
++  export SPOTIFY_CLIENT_ID='acc2fa18c9154e0a97f41f0a2675a093'
++  ~~~~~~
+    + CategoryInfo          : ObjectNotFound: (export:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+IS :
+
+$env:SPOTIFY_CLIENT_ID='acc2fa18c9154e0a97f41f0a2675a093'
+This will set the SPOTIFY_CLIENT_ID environment variable to the specified value. After running this command, you can access the environment variable in your PowerShell session or in any script that you run within that session.
+
+If you're using a different shell or command prompt, the syntax might be different. For example, in a typical Unix/Linux shell, you would use the export command:
+
+export SPOTIFY_CLIENT_ID='acc2fa18c9154e0a97f41f0a2675a093'
+
+It's essential to use the appropriate syntax for the shell or command prompt you are using.
